@@ -1,20 +1,53 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+void get_token_error(char **tokens){
+	if (!tokens){
+		fprintf(stderr, "%s\n", "Get tokens error");
+		exit(EXIT_FAILURE);
+	}
+}
+char **get_tokens(char *line){
+	char **tokens=NULL;
+	char *token;
+	unsigned int len_max=1;
+	unsigned int len;
+	unsigned int i=0;
+	len=len_max;
+	char *delimiters="\t\v\r\n ";
+	tokens = malloc(len_max * sizeof(char*));
+	get_token_error(tokens);
+	token= strtok(line,delimiters);
+	while(token !=NULL){
+		//printf("%s\n", token);
+		tokens[i++]= token;
+		if (i>=len){
+			len= i+len_max;
+			tokens= realloc(tokens, len * sizeof(char*));
+			get_token_error(tokens);
+
+		}
+		token= strtok(NULL, delimiters);
+	}
+	tokens[i]= NULL;
+	return tokens;
+
+}
 char *read_line(){
 	char *line=NULL;
 	char ch;
 	unsigned int len_max=1;
 	unsigned int len;
 	unsigned int i=0;
-	line= malloc(len_max);
+	line= malloc(len_max * sizeof(char));
 	len= len_max;
 	while ((ch= getchar())!= '\n' && ch != EOF){
 		line[i++]=(char) ch;
-		if (i==len){
+		if (i>=len){
 			len= i+len_max;
-			line = realloc(line,len);
+			line = realloc(line,len * sizeof(char));
 			if (!line){
-				fprintf(stderr, "ERROR\n");
+				fprintf(stderr, "Read line error\n");
 				exit(EXIT_FAILURE);
 
 			}
@@ -26,9 +59,19 @@ char *read_line(){
 int main(){
 	printf("%s", ">>>" );
 	char *readline;
+	char **tokens=NULL;
 	readline= read_line();
-	printf("%s\n", readline);
+	//printf("%s\n", readline);
+	tokens= get_tokens(readline);
+	char *token;
+	int i=0;
+	token= tokens[i++];
+	while (token != NULL){
+		printf("%s\n",token );
+		token= tokens[i++];
+	}
 	free(readline);
+	free(tokens);
 	return 0;
 
 }
