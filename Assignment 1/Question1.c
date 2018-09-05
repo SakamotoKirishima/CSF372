@@ -3,6 +3,8 @@
 #include <string.h>
 #include<unistd.h>
 #include<sys/wait.h>
+int n=5;
+char *commands[]= {"cd", "echo", "ls", "wc","quit"};
 int start_process(char **tokens){
 	pid_t process_id= fork();
 	pid_t wpid;
@@ -10,8 +12,9 @@ int start_process(char **tokens){
 	if (process_id==0) {
 		signal(SIGINT, SIG_IGN);
 		//printf("%s\n", "Child process");
-		//int check= execvp(tokens[0], tokens);
-		//if (check==-1) perror("Error in the child process\n");
+		int check= execvp(tokens[0], tokens);
+		if (check==-1) perror("Error in the child process\n");
+
 
 	}
 	else if (process_id<0) perror("Error forking\n");
@@ -21,6 +24,57 @@ int start_process(char **tokens){
 		//printf("%s\n", "Parent process");
 	} 
 	return 1;
+}
+int cd_command(char **tokens){
+	printf("%s\n", "cd_command" );
+	return 1;
+
+}
+int echo_command(char **tokens){
+	printf("%s\n", "echo_command" );
+	return 1;
+}
+int ls_command(char **tokens){
+	printf("%s\n", "ls_command" );
+	return 1;
+
+}
+int wc_command(char **tokens){
+	printf("%s\n", "wc_command" );
+	return 1;
+}
+int quit_command(){
+	printf("%s\n", "quit_command" );
+	return 1;
+}
+int execute_command(char **tokens, int command_index){
+	switch (command_index){
+		case 0: return cd_command(tokens);
+		case 1: return echo_command(tokens);
+		case 2: return ls_command(tokens);
+		case 3: return wc_command(tokens);
+		case 4: return quit_command();
+	}
+	return 0;
+}
+int find_command(char **tokens){
+		if (tokens[0]==NULL) return 0;
+		int i,check;
+		check=0;
+		for (int i = 0; i < n; i++)
+		{
+			if (strcmp(tokens[0],commands[i])==0){
+				check=1;
+				return execute_command(tokens,i);
+			} 
+
+		}
+		if (!check) {
+			fprintf(stderr, "%s\n", "Could not find command");
+			return 0;
+		}
+		printf("%s\n", "END" );
+		return start_process(tokens);
 }
 void get_token_error(char **tokens){
 	if (!tokens){
@@ -78,6 +132,8 @@ char *read_line(){
 	return realloc(line, sizeof(char)*len);
 }
 int main(){
+	signal(SIGABRT, SIG_IGN);
+	signal(SIGINT, SIG_IGN);
 	int cont;
 	printf("%s", ">>>" );
 	char *readline;
@@ -92,7 +148,8 @@ int main(){
 		printf("%s\n",token );
 		token= tokens[i++];
 	}*/
-	start_process(tokens);
+	cont= find_command(tokens);
+	printf("cont=%d\n", cont);
 	free(readline);
 	free(tokens);
 	return 0;
