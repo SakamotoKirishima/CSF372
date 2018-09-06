@@ -4,8 +4,6 @@
 #include<unistd.h>
 #include<sys/wait.h>
 #include<limits.h>
-#include<sys/types.h>
-#include<sys/stat.h>
 #include<dirent.h>
 int n=5;
 char *commands[]= {"cd", "echo", "ls", "wc","quit"};
@@ -19,7 +17,6 @@ int start_process(char **tokens){
 	int status=0;
 	if (process_id==0) {
 		signal(SIGINT, SIGINTHandler);
-		//printf("%s\n", "Child process");
 		int check= execvp(tokens[0], tokens);
 		if (check==-1) perror("Error in the child process\n");
 
@@ -29,21 +26,21 @@ int start_process(char **tokens){
 	else{
 		signal(SIGINT, SIGINTHandler);
 		while ((wpid= wait(&status))>0);
-		//printf("%s\n", "Parent process");
 	} 
 	return 1;
 }
-char *get_full_path(char **tokens){
+char *get_full_path(char **tokens, int ignore_index){
 	char *directory;
 	int len_max=1;
 	directory= malloc(len_max*sizeof(char));
 	int i=0;
+	int j;
 	char *token= tokens[i++];
+	for(j=0;j<ignore_index;j++) token= tokens[i++];
 	token= tokens[i++];
 	while (token!=NULL){
 		directory= realloc(directory, (len_max+strlen(token))*sizeof(char));
 		len_max+=strlen(token);
-		//printf("%s\n", token );
 		strcat(directory,token);
 		token= tokens[i++];
 	}
@@ -57,16 +54,11 @@ char *get_full_path(char **tokens){
 	}
 }
 int cd_command(char **tokens){
-	char *fullpathname= get_full_path(tokens);
-	if (strcmp(fullpathname,"cwd")==0) return 1;
+	char *fullpathname= get_full_path(tokens,0);
 	if (fullpathname==NULL) return 1;
-	//printf("%s\n", fullpathname);
-	//printf("%s\n", directory );
+	if (strcmp(fullpathname,"cwd")==0) return 1;
 	int check= chdir(fullpathname);
 	if (check==-1) fprintf(stderr, "%s\n", "Unable to change directory" );
-	//int check= chdir(directory);
-	//if (check) printf("%s\n", "FAIL" );
-	//else printf("%s\n", "FAIL" );
 	return 1;
 
 }
@@ -78,6 +70,7 @@ int echo_command(char **tokens){
 		printf("%s ", token);
 		token= tokens[i++];
 	}
+	printf("\n");
 	return 1;
 }
 char *cwd(){
@@ -87,17 +80,10 @@ char *cwd(){
 	if ((buf=malloc((size_t)size))!=NULL) ptr= getcwd(buf, (size_t)size);
 	return ptr;
 }
-int is_regular_file( char *path){
-	struct stat path_status;
-	stat(path, &path_status);
-	return S_ISREG(path_status.st_mode);
-}
 int ls_command(char **tokens){
-	char *fullpathname= get_full_path(tokens);
+	char *fullpathname= get_full_path(tokens,0);
 	if (fullpathname==NULL) return 1;
 	if (strcmp(fullpathname,"cwd")==0) fullpathname= cwd();
-	//printf("%s\n", fullpathname );
-	//printf("%d\n", is_regular_file(fullpathname) );
 	DIR *d;
 	struct dirent *dir;
 	d= opendir(fullpathname);
@@ -112,7 +98,76 @@ int ls_command(char **tokens){
 
 }
 int wc_command(char **tokens){
-	printf("%s\n", "wc_command" );
+	int i=0;
+	if (tokens[1]==NULL) {
+		fprintf(stderr, "%s\n", "Arguments not recognized" );
+		return 1;
+	}
+	if (tokens[2]==NULL){
+		fprintf(stderr, "%s\n", "File not recognized" );
+		return 1;
+	}
+	char *fullpathname= get_full_path(tokens,1);
+	char *option= tokens[1];
+	char *check= "check";
+	int check1= option[0]=='-';
+	if (fullpathname==NULL){
+		return 1;
+
+	}
+	for(i=1; i<strlen(option) && check!=NULL;i++){
+		if (option[i]!= 'l'&& option[i]!='w'&& option[i]!= 'c'&& option) {
+			check=NULL;
+			break;
+		}
+	}
+	if ((strlen(option)>4)||check==NULL|| check1==0){
+		fprintf(stderr, "%s\n", "Arguments not recognized" );
+		return 1;
+	}
+	FILE *fileptr = fopen(fullpathname,"r");
+	if (fileptr==NULL){
+		fprintf(stderr, "%s\n", "Coldn't open file");
+		return 1;
+	}
+	char c;
+	int flag=0;
+	check= strchr(option,'l');
+	if (check != NULL){
+		
+		int no_of_lines=0;
+		for (c= getc(fileptr); c!= EOF;c=getc(fileptr)){
+			if (c=='\n') no_of_lines++;
+		}
+		printf("%d ",no_of_lines);
+		flag=1;
+	}
+	check= strchr(option,'w');
+	fseek(fileptr,0,0);
+	if (check!=NULL){
+		int no_of_words=0;
+		for(c=getc(fileptr); c!=EOF;c=getc(fileptr)){
+			if (c=='\n'|| c==' '|| c=='.' || c==','|| c=='?'|| c== '!'){
+				no_of_words++;
+			} 
+		}
+		printf("%d ", no_of_words );
+		flag=1;
+	}
+	check= strchr(option,'c');
+	fseek(fileptr,0,0);
+	if (check!=NULL){
+		int no_of_bytes;
+		for(no_of_bytes=0; getc(fileptr)!=EOF;++no_of_bytes);
+		printf("%d", no_of_bytes );
+		flag =1;
+	}
+	if (flag==0) {
+		printf("%s\n", "Arguments not recognized" );
+		return 1;
+	}
+	fclose(fileptr);
+	printf("\n");
 	return 1;
 }
 int quit_command(){
@@ -164,7 +219,6 @@ char **get_tokens(char *line){
 	get_token_error(tokens);
 	token= strtok(line,delimiters);
 	while(token !=NULL){
-		//printf("%s\n", token);
 		tokens[i++]= token;
 		if (i>=len){
 			len= i+len_max;
@@ -204,30 +258,19 @@ char *read_line(){
 int main(){
 	signal(SIGINT, SIGINTHandler);
 	int cont=1;
-	char *ptr= cwd();
-	printf("%s", ptr );
-	printf("%s", ">>>" );
-	char *readline;
-	char **tokens=NULL;
-	readline= read_line();
-	//printf("%s\n", readline);
-	tokens= get_tokens(readline);
-	/*char *token;
-	int i=0;
-	token= tokens[i++];
-	while (token != NULL){
-		printf("%s\n",token );
-		token= tokens[i++];
-	}*/
-	cont= find_command(tokens);
-	/*long size1;
-	char *buf1, *ptr1;
-	size1 = pathconf(".",_PC_PATH_MAX);
-	if ((buf=malloc((size_t)size1))!=NULL) ptr1= getcwd(buf1, (size_t)size1);
-	printf("%s", ptr1 );*/
-	printf("cont=%d\n", cont);
-	free(readline);
-	free(tokens);
+	while (cont){
+		char *ptr= cwd();
+		printf("%s", ptr );
+		printf("%s", ">>>" );
+		char *readline;
+		char **tokens=NULL;
+		readline= read_line();
+		tokens= get_tokens(readline);
+		cont= find_command(tokens);
+		free(readline);
+		free(tokens);
+
+	}
 	return 0;
 
 }
