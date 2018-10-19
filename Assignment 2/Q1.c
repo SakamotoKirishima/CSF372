@@ -4,7 +4,7 @@
 //Process structure
 typedef struct Process {
 	int pid;
-	char state;
+	char state;			//N = Not arrived yet, A = Arrived/Ready, R = Running
 	int arrival_time;
 	int cpu_burst;
 	int wait_time;
@@ -18,7 +18,7 @@ typedef struct Process {
 
 //Event structure
 typedef struct Event {
-	enum eventType { Arrival, CPUburstCompletion, TimerExpired };
+	enum eventType { Arrival, CPUburstCompletion, TimerExpired } type;
 	double time; // time units since the start of the simulation
 	// add other fields which you feel are necessary
 } Event;
@@ -196,52 +196,23 @@ void deleteEventNode(minEventHeap *hp) {
     }
 }
 
-
-
-
-
-void b_sort(Process temp[],int n)
-{
-	Process t;
-	int i,j;
-	for(i=1;i<n;i++)
-		for(j=0;j<n-i;j++){
-			if(temp[j].at > temp[j+1].at){
-				t = temp[j];
-				temp[j] = temp[j+1];
-				temp[j+1] = t;
-			}
-		}
-	}
-
-	int accept(Process P[]){
-		int i,n;
-		printf("\n Enter total no. of Process : ");
-		scanf("%d",&n);
-		for(i=0;i<n;i++){
-			printf("\n PROCESS [%d]",i+1);
-			printf(" Enter process name : ");
-			scanf("%s",&P[i].name);
-			printf(" Enter burst time : ");
-			scanf("%d",&P[i].bt);
-			printf(" Enter arrival time : ");
-			scanf("%d",&P[i].at);
-			printf(" Enter priority : ");
-			scanf("%d",&P[i].prt);
-		}
-		printf("\n PROC.\tB.T.\tA.T.\tPRIORITY");
-		for(i=0;i<n;i++)
-			printf("\n %s\t%d\t%d\t%d",P[i].name,P[i].bt,P[i].at,P[i].prt);
-		return n;
-	}
-
 	int main(){
 
 		int mode;
 		printf("1: FCFS\n2: Multilevel Queue\nPlease enter your choice: ");
 		scanf("%d",&mode);
 		if(mode==1){
-			//FCFS
+
+			double time = 0.0;
+
+			//TODO: Make processes array which contains all processes;
+			minProcessHeap processHeap = initProcessHeap();
+			buildMinProcessHeap(&processHeap, processes, size);
+			minEventHeap eventHeap = initEventHeap();
+			Event initialEvent;
+			initialEvent.type = Arrival;
+			initialEvent.time = 0.0;
+			insertEventNode(&eventHeap,initialEvent);
 		}
 		else if (mode==2){
 			//Multilevel queue
