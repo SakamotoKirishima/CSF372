@@ -3,14 +3,14 @@
 
 //Process structure
 typedef struct Process {
-	int pid;
-	char state;			//N = Not arrived yet, A = Arrived/Ready, R = Running
-	int arrival_time;
-	int cpu_burst;
-	int wait_time;
-	char* scheduling_policy;
-	int time_quantum;
-	bool preemption;
+    int pid;
+    char state;			//N = Not arrived yet, A = Arrived/Ready, R = Running
+    int arrival_time;
+    int cpu_burst;
+    int wait_time;
+    char* scheduling_policy;
+    int time_quantum;
+    bool preemption;
 // add other fields which you feel are necessary
 } Process;
 
@@ -18,9 +18,9 @@ typedef struct Process {
 
 //Event structure
 typedef struct Event {
-	enum eventType { Arrival, CPUburstCompletion, TimerExpired } type;
-	double time; // time units since the start of the simulation
-	// add other fields which you feel are necessary
+    enum eventType { Arrival, CPUburstCompletion, TimerExpired } type;
+    double time; // time units since the start of the simulation
+    // add other fields which you feel are necessary
 } Event;
 
 //Global variables
@@ -34,72 +34,68 @@ Process processes[];
 
 //Heap Implementation for ready queue
 
-typedef struct processNode {
-	Process process ;
-} processNode ;
-
 typedef struct minProcessHeap {
-	int size ;
-	processNode *elem ;
+    int size ;
+    processNode *elem ;
 } minProcessHeap ;
 
 void swapProcessNodes(processNode *n1,processNode *n2) {
-	processNode temp = *n1;
-	*n1 = *n2;
-	*n2 = temp;
+    processNode temp = *n1;
+    *n1 = *n2;
+    *n2 = temp;
 }
 
 minProcessHeap initProcessHeap() {
-	minProcessHeap hp;
-	hp.size = 0;
-	return hp;
+    minProcessHeap hp;
+    hp.size = 0;
+    return hp;
 }
 
 void heapifyProcess(minProcessHeap *hp, int i) {
-	int smallest = (LCHILD(i) < hp->size && hp->elem[LCHILD(i)].at < hp->elem[i].at) ? LCHILD(i) : i ;
-	if(RCHILD(i) < hp->size && hp->elem[RCHILD(i)].at < hp->elem[smallest].at) {
-		smallest = RCHILD(i) ;
-	}
-	if(smallest != i) {
-		swap(&(hp->elem[i]), &(hp->elem[smallest])) ;
-		heapifyProcess(hp, smallest) ;
-	}
+    int smallest = (LCHILD(i) < hp->size && hp->elem[LCHILD(i)].at < hp->elem[i].at) ? LCHILD(i) : i ;
+    if(RCHILD(i) < hp->size && hp->elem[RCHILD(i)].at < hp->elem[smallest].at) {
+        smallest = RCHILD(i) ;
+    }
+    if(smallest != i) {
+        swap(&(hp->elem[i]), &(hp->elem[smallest])) ;
+        heapifyProcess(hp, smallest) ;
+    }
 }
 
 void buildMinProcessHeap(minProcessHeap *hp, Process *arr, int size) {
-	int i ;
-	for(i = 0; i < size; i++) {
-		if(hp->size) {
-			hp->elem = realloc(hp->elem, (hp->size + 1) * sizeof(processNode)) ;
-		} else {
-			hp->elem = malloc(sizeof(processNode)) ;
-		}
-		processNode nd ;
-		nd.process = arr[i] ;
-		hp->elem[(hp->size)++] = nd ;
-	}
+    int i ;
+    for(i = 0; i < size; i++) {
+        if(hp->size) {
+            hp->elem = realloc(hp->elem, (hp->size + 1) * sizeof(processNode)) ;
+        } else {
+            hp->elem = malloc(sizeof(processNode)) ;
+        }
+        processNode nd ;
+        nd.process = arr[i] ;
+        hp->elem[(hp->size)++] = nd ;
+    }
 
-	for(i = (hp->size - 1) / 2; i >= 0; i--) {
-		heapifyProcess(hp, i) ;
-	}
+    for(i = (hp->size - 1) / 2; i >= 0; i--) {
+        heapifyProcess(hp, i) ;
+    }
 }
 
 void insertProcessNode(minProcessHeap *hp, Process process) {
-	if(hp->size) {
-		hp->elem = realloc(hp->elem, (hp->size + 1) * sizeof(processNode)) ;
-	} else {
-		hp->elem = malloc(sizeof(processNode)) ;
-	}
+    if(hp->size) {
+        hp->elem = realloc(hp->elem, (hp->size + 1) * sizeof(processNode)) ;
+    } else {
+        hp->elem = malloc(sizeof(processNode)) ;
+    }
 
-	processNode nd ;
-	nd.process = process ;
+    processNode nd ;
+    nd.process = process ;
 
-	int i = (hp->size)++ ;
-	while(i && nd.at < hp->elem[PARENT(i)].at) {
-		hp->elem[i] = hp->elem[PARENT(i)] ;
-		i = PARENT(i) ;
-	}
-	hp->elem[i] = nd ;
+    int i = (hp->size)++ ;
+    while(i && nd.at < hp->elem[PARENT(i)].at) {
+        hp->elem[i] = hp->elem[PARENT(i)] ;
+        i = PARENT(i) ;
+    }
+    hp->elem[i] = nd ;
 }
 
 void deleteProcessNode(minProcessHeap *hp) {
@@ -117,71 +113,71 @@ void deleteProcessNode(minProcessHeap *hp) {
 //Heap implementation of event queue
 
 typedef struct EventNode {
-	Event event ;
+    Event event ;
 } EventNode ;
 
 typedef struct minEventHeap {
-	int size ;
-	EventNode *elem ;
+    int size ;
+    EventNode *elem ;
 } minEventHeap ;
 
 void swapEventNodes(EventNode *n1,EventNode *n2) {
-	EventNode temp = *n1;
-	*n1 = *n2;
-	*n2 = temp;
+    EventNode temp = *n1;
+    *n1 = *n2;
+    *n2 = temp;
 }
 
 minEventHeap initEventHeap() {
-	minEventHeap hp;
-	hp.size = 0;
-	return hp;
+    minEventHeap hp;
+    hp.size = 0;
+    return hp;
 }
 
 void heapifyEvent(minEventHeap *hp, int i) {
-	int smallest = (LCHILD(i) < hp->size && hp->elem[LCHILD(i)].at < hp->elem[i].at) ? LCHILD(i) : i ;
-	if(RCHILD(i) < hp->size && hp->elem[RCHILD(i)].at < hp->elem[smallest].at) {
-		smallest = RCHILD(i) ;
-	}
-	if(smallest != i) {
-		swap(&(hp->elem[i]), &(hp->elem[smallest])) ;
-		heapifyEvent(hp, smallest) ;
-	}
+    int smallest = (LCHILD(i) < hp->size && hp->elem[LCHILD(i)].at < hp->elem[i].at) ? LCHILD(i) : i ;
+    if(RCHILD(i) < hp->size && hp->elem[RCHILD(i)].at < hp->elem[smallest].at) {
+        smallest = RCHILD(i) ;
+    }
+    if(smallest != i) {
+        swap(&(hp->elem[i]), &(hp->elem[smallest])) ;
+        heapifyEvent(hp, smallest) ;
+    }
 }
 
 void buildMinEventHeap(minEventHeap *hp, Event *arr, int size) {
-	int i ;
-	for(i = 0; i < size; i++) {
-		if(hp->size) {
-			hp->elem = realloc(hp->elem, (hp->size + 1) * sizeof(EventNode)) ;
-		} else {
-			hp->elem = malloc(sizeof(EventNode)) ;
-		}
-		EventNode nd ;
-		nd.event = arr[i] ;
-		hp->elem[(hp->size)++] = nd ;
-	}
+    int i ;
+    for(i = 0; i < size; i++) {
+        if(hp->size) {
+            hp->elem = realloc(hp->elem, (hp->size + 1) * sizeof(EventNode)) ;
+        } else {
+            hp->elem = malloc(sizeof(EventNode)) ;
+        }
+        EventNode nd ;
+        nd.event = arr[i] ;
+        hp->elem[(hp->size)++] = nd ;
+    }
 
-	for(i = (hp->size - 1) / 2; i >= 0; i--) {
-		heapifyEvent(hp, i) ;
-	}
+    for(i = (hp->size - 1) / 2; i >= 0; i--) {
+        heapifyEvent(hp, i) ;
+    }
 }
 
 void insertEventNode(minEventHeap *hp, Event event) {
-	if(hp->size) {
-		hp->elem = realloc(hp->elem, (hp->size + 1) * sizeof(EventNode)) ;
-	} else {
-		hp->elem = malloc(sizeof(EventNode)) ;
-	}
+    if(hp->size) {
+        hp->elem = realloc(hp->elem, (hp->size + 1) * sizeof(EventNode)) ;
+    } else {
+        hp->elem = malloc(sizeof(EventNode)) ;
+    }
 
-	EventNode nd ;
-	nd.Event = event ;
+    EventNode nd ;
+    nd.Event = event ;
 
-	int i = (hp->size)++ ;
-	while(i && nd.at < hp->elem[PARENT(i)].at) {
-		hp->elem[i] = hp->elem[PARENT(i)] ;
-		i = PARENT(i) ;
-	}
-	hp->elem[i] = nd ;
+    int i = (hp->size)++ ;
+    while(i && nd.at < hp->elem[PARENT(i)].at) {
+        hp->elem[i] = hp->elem[PARENT(i)] ;
+        i = PARENT(i) ;
+    }
+    hp->elem[i] = nd ;
 }
 
 void deleteEventNode(minEventHeap *hp) {
@@ -190,34 +186,73 @@ void deleteEventNode(minEventHeap *hp) {
         hp->elem[0] = hp->elem[--(hp->size)] ;
         hp->elem = realloc(hp->elem, hp->size * sizeof(EventNode)) ;
         heapifyEvent(hp, 0) ;
-    } else {
-        printf("\nMin Heap is empty!\n") ;
-        free(hp->elem) ;
     }
 }
 
-	int main(){
+int main() {
 
-		int mode;
-		printf("1: FCFS\n2: Multilevel Queue\nPlease enter your choice: ");
-		scanf("%d",&mode);
-		if(mode==1){
+    int mode;
+    printf("1: FCFS\n2: Multilevel Queue\nPlease enter your choice: ");
+    scanf("%d",&mode);
+    if(mode==1) {
 
-			double time = 0.0;
+        double time = 0.0;
+        double waitTime = 0.0;	//TODO: Use this
 
-			//TODO: Make processes array which contains all processes;
-			minProcessHeap processHeap = initProcessHeap();
-			buildMinProcessHeap(&processHeap, processes, size);
-			minEventHeap eventHeap = initEventHeap();
-			Event initialEvent;
-			initialEvent.type = Arrival;
-			initialEvent.time = 0.0;
-			insertEventNode(&eventHeap,initialEvent);
-		}
-		else if (mode==2){
-			//Multilevel queue
-		}
-		else{
-			printf("Error in choice..... exiting\n");
-		}
-	}
+        //TODO: Make processes array which contains all processes;
+        minProcessHeap processHeap = initProcessHeap();
+        minProcessHeap *processHeapPtr = &processHeap;
+        buildMinProcessHeap(processHeapPtr, processes, size);
+        minEventHeap eventHeap = initEventHeap();
+        minEventHeap *eventHeapPtr = &eventHeap;
+        Event initialEvent;
+        initialEvent.type = Arrival;
+        initialEvent.time = processHeapPtr->elem[0].at;
+        insertEventNode(&eventHeap,initialEvent);
+        while(eventHeap.size != 0) {
+            Event currentEvent = eventHeapPtr->elem[0].event;
+            time = currentEvent.time;
+            switch(currentEvent.type) {
+            //TODO
+            case Arrival:
+                Process *process = &((processHeapPtr->elem[0]).process);
+                process->state = 'A';
+                printf("Process with PID %d is now in ready queue\n",process->pid);
+                if(CPU==-1) {
+                    CPU = process->pid;
+                    printf("Running process with pid = \n",CPU);
+                    process->state = 'R';
+                }
+                if((double arrival = processHeapPtr->elem[LCHILD(0)].at < processHeapPtr->elem[RCHILD(0)].at ? processHeapPtr->elem[LCHILD(0)].at : processHeapPtr->elem[RCHILD(0)].at)
+                        < time + process->cpu_burst) {
+
+                    Event e;
+                    e.type = Arrival;
+                    e.time = arrival;
+                    insertEventNode(eventHeapPtr,e);
+                }
+                else{
+                	Event e;
+                	e.type = CPUburstCompletion;
+                	e.time = time + process->cpu_burst;
+                	insertEventNode(eventHeapPtr,e);
+                }
+                deleteEventNode(eventHeapPtr);
+                break;
+            case CPUburstCompletion:
+                break;
+            case TimerExpired:
+                //Unused in FCFS
+                break;
+            }
+        }
+        waitTime/=20 //TODO: Change this to number of processes
+                  printf("Average waitTime = \n",waitTime);
+    }
+    else if (mode==2) {
+        //Multilevel queue
+    }
+    else {
+        printf("Error in choice..... exiting\n");
+    }
+}
