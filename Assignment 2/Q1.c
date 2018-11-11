@@ -9,7 +9,7 @@ typedef struct Process {
     int event_time;
     int cpu_burst;
     int remaining_burst;
-    int sorted_number;
+    int sorted_number;      //just array location of the process in the sorted array
     
 } Process;
 
@@ -286,6 +286,7 @@ int main() {
 
                 case Arrival:
                 processes[processCounter].state = 'A';
+                //insert Process in any one heap according to it's cpu burst requirement
                 insertProcessNode(processes[processCounter].cpu_burst > 8?processHeapPtr2:processHeapPtr, processes[processCounter]);
                 printf("Process with PID %d is now in ready queue\n",processes[processCounter].pid);
 
@@ -307,12 +308,12 @@ int main() {
 
                     } else {
                         Event e;
-                        if(processes[processCounter].cpu_burst > 4) {
+                        if(processes[processCounter].remaining_burst > 4) {
                             e.type = TimerExpired;
                             e.time = time+4;
                         } else {
                             e.type = CPUburstCompletion;
-                            e.time = time+processes[processCounter].cpu_burst;
+                            e.time = time+processes[processCounter].remaining_burst;
                         }
                         insertEventNode(eventHeapPtr,e);
                     }
@@ -353,12 +354,12 @@ int main() {
 
                     //Adding CPUBurst of this process;
                     Event e;
-                    if(process.cpu_burst > 4) {
+                    if(process.remaining_burst > 4) {
                         e.type = TimerExpired;
                         e.time = time+4;
                     } else {
                         e.type = CPUburstCompletion;
-                        e.time = time+process.cpu_burst;
+                        e.time = time+process.remaining_burst;
                     }
                     insertEventNode(eventHeapPtr,e);
                 } else if(processHeapPtr2->size != 0) {
