@@ -23,6 +23,7 @@ typedef struct Event {
 //Global variables
 int CPU;
 int currentProcess;     //process number in sorted array
+int quantum;
 
 //Heaps
 #define LCHILD(x) 2 * x + 1
@@ -298,6 +299,7 @@ int main() {
                     currentProcess = processes[processCounter].sorted_number;
                     //implicitly, waiting time is 0 (as it ran right away)
 
+                    //If process is in FCFS queue
                     if(processes[processCounter].cpu_burst > 8) {
                         Event e;
 
@@ -306,11 +308,13 @@ int main() {
                         
                         insertEventNode(eventHeapPtr,e);
 
+                    //If process is in RR queue 
                     } else {
+                        //Adding CPUBurst or TimerExpired event for this process;
                         Event e;
-                        if(processes[processCounter].remaining_burst > 4) {
+                        if(processes[processCounter].remaining_burst > quantum) {
                             e.type = TimerExpired;
-                            e.time = time+4;
+                            e.time = time+quantum;
                         } else {
                             e.type = CPUburstCompletion;
                             e.time = time+processes[processCounter].remaining_burst;
@@ -337,14 +341,17 @@ int main() {
                 case CPUburstCompletion:
                 printf("Process with id %d has finished execution\n", CPU);
                 waitTime += ((time-processes[currentProcess].arrival_time)-processes[currentProcess].cpu_burst);
-                
-                if(processes[currentProcess].cpu_burst > 8) deleteProcessNode(processHeapPtr2);      //Process finished execution (no need for it to be in the heap)
+
+                //Process finished execution (no need for it to be in the heap)
+                //If process is in FCFS queue
+                if(processes[currentProcess].cpu_burst > 8) deleteProcessNode(processHeapPtr2);
+                //If process is in RR queue
                 else deleteProcessNode(processHeapPtr);
 
                 CPU = -1;               //CPU is now not running any process
                 currentProcess = -1;
 
-                //Run next process if it exists
+                //Run next process if it exists in RR
                 if(processHeapPtr->size != 0){
                     Process process = processHeapPtr->elem[0];
                     process.state = 'R';
@@ -352,16 +359,18 @@ int main() {
                     currentProcess = process.sorted_number;
                     printf("Running process with pid = %d\n",CPU);
 
-                    //Adding CPUBurst of this process;
+                    //Adding CPUBurst or TimerExpired event for this process;
                     Event e;
-                    if(process.remaining_burst > 4) {
+                    if(process.remaining_burst > quantum) {
                         e.type = TimerExpired;
-                        e.time = time+4;
+                        e.time = time+quantum;
                     } else {
                         e.type = CPUburstCompletion;
                         e.time = time+process.remaining_burst;
                     }
                     insertEventNode(eventHeapPtr,e);
+
+                //Run next process if it exists in FCFS (considering RR is empty)
                 } else if(processHeapPtr2->size != 0) {
                     Process process = processHeapPtr2->elem[0];
                     process.state = 'R';
@@ -381,24 +390,32 @@ int main() {
 
                 case TimerExpired:
                 printf("Timer Expired for currently running process with pid = %d\n",CPU);
-                processes[currentProcess].remaining_burst = processes[currentProcess].remaining_burst - 4;
+
+                //Reduce remaining burst time;
+                processes[currentProcess].remaining_burst = processes[currentProcess].remaining_burst - quantum;
+                //New arrival time in the RR queue (addition at end of queue)
                 processes[currentProcess].event_time = time;
+
+                //Delete old entry and make new entry at end of queue
                 deleteProcessNode(processHeapPtr);
                 insertProcessNode(processHeapPtr,processes[currentProcess]);
+
+                //Empty the CPU
                 CPU = -1;
                 currentProcess = -1;
 
+                //Run next process (always exists, as the just expired process will always be there)
                 Process process = processHeapPtr->elem[0];
                 process.state = 'R';
                 CPU = process.pid;
                 currentProcess = process.sorted_number;
                 printf("Running process with pid = %d\n",CPU);
 
-                //Adding CPUBurst of this process;
+                //Adding CPUBurst or TimerExpired event for this process;
                 Event e;
-                if(process.remaining_burst > 4) {
+                if(process.remaining_burst > quantum) {
                     e.type = TimerExpired;
-                    e.time = time+4;
+                    e.time = time+quantum;
                 } else {
                     e.type = CPUburstCompletion;
                     e.time = time+process.remaining_burst;
