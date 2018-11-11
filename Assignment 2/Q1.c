@@ -6,7 +6,10 @@ typedef struct Process {
 	int pid;            //Will be the data entry number for simplicity
     char state;			//N = Not arrived yet, A = Arrived/Ready, R = Running
     int arrival_time;
+    int event_time;
     int cpu_burst;
+    int remaining_burst;
+    int sorted_number;
     
 } Process;
 
@@ -19,6 +22,7 @@ typedef struct Event {
 
 //Global variables
 int CPU;
+int currentProcess;     //process number in sorted array
 
 //Heaps
 #define LCHILD(x) 2 * x + 1
@@ -45,8 +49,8 @@ minProcessHeap initProcessHeap() {
 }
 
 void heapifyProcess(minProcessHeap *hp, int i) {
-	int smallest = (LCHILD(i) < hp->size && hp->elem[LCHILD(i)].arrival_time < hp->elem[i].arrival_time) ? LCHILD(i) : i ;
-	if(RCHILD(i) < hp->size && hp->elem[RCHILD(i)].arrival_time < hp->elem[smallest].arrival_time) {
+	int smallest = (LCHILD(i) < hp->size && hp->elem[LCHILD(i)].event_time < hp->elem[i].event_time) ? LCHILD(i) : i ;
+	if(RCHILD(i) < hp->size && hp->elem[RCHILD(i)].event_time < hp->elem[smallest].event_time) {
 		smallest = RCHILD(i) ;
 	}
 	if(smallest != i) {
@@ -63,7 +67,7 @@ void insertProcessNode(minProcessHeap *hp, Process process) {
 	}
 
 	int i = (hp->size)++ ;
-	while(i && process.arrival_time < hp->elem[PARENT(i)].arrival_time) {
+	while(i && process.event_time < hp->elem[PARENT(i)].event_time) {
 		hp->elem[i] = hp->elem[PARENT(i)] ;
 		i = PARENT(i) ;
 	}
@@ -142,19 +146,24 @@ void insertProcesses(int processCount, Process processes[]) {
 		scanf("%d",&processes[i].cpu_burst);
 		processes[i].state = 'N';
 		processes[i].pid = i+1;
-	}
+        processes[i].remaining_burst = processes[i].cpu_burst;
+        processes[i].event_time = processes[i].arrival_time;
+    }
 
 	//Bubble sort processes (I am just lazy to optimize this)
-	int j;
-	for(i=0;i<processCount-1;i++) {
-		for(j=0;j<processCount-1;j++) {
-			if (processes[j].arrival_time > processes[j+1].arrival_time) {
-				Process temp = processes[j];
-				processes[j] = processes[j+1];
-				processes[j+1] = temp;
-			}
-		}
-	}
+    int j;
+    for(i=0;i<processCount-1;i++) {
+      for(j=0;j<processCount-1;j++) {
+         if (processes[j].arrival_time > processes[j+1].arrival_time) {
+            Process temp = processes[j];
+            processes[j] = processes[j+1];
+            processes[j+1] = temp;
+        }
+    }
+}
+for(i=0;i<processCount;i++) {
+    processes[i].sorted_number = i;
+}
 
 }
 
@@ -264,69 +273,146 @@ int main() {
     }
     else if (mode==2) {
 
-        /*
+        //Multilevel queue (non preemptive, RR queue1 > FCFS queue2)
+        //Second process heap for FCFS here, first for RR
+        minProcessHeap processHeap2 = initProcessHeap();
+        minProcessHeap *processHeapPtr2 = &processHeap2;      //get heap pointer (passed to other heap functions)
 
-        //Multilevel queue
+        //Loop while any events remain
+        while(eventHeap.size != 0) {
+            Event currentEvent = eventHeapPtr->elem[0];
+            time = currentEvent.time;                   //Update system clock to given time (as this is a simulation)
+            switch(currentEvent.type) {
 
-    	while(eventHeap.size != 0) {
-    		Event currentEvent = eventHeapPtr->elem[0];
-    		time = currentEvent.time;
-    		switch(currentEvent.type) {
-            //TODO
-    			case Arrival:
-    			insertProcessNode(processHeapPtr,processes[processCounter++]);
-    			Process *process = &((processHeapPtr->elem[0]));
-    			process->state = 'A';
-    			printf("Process with PID %d is now in ready queue\n",process->pid);
-    			if(CPU==-1) {
-    				CPU = process->pid;
-    				printf("Running process with pid = %d\n",CPU);
-    				process->state = 'R';
-                    //implicitly, waiting time is 0
-    			}
+                case Arrival:
+                processes[processCounter].state = 'A';
+                insertProcessNode(processes[processCounter].cpu_burst > 8?processHeapPtr2:processHeapPtr, processes[processCounter]);
+                printf("Process with PID %d is now in ready queue\n",processes[processCounter].pid);
 
-                //Adding CPUBurst of this process;
-    			Event e;
-    			e.type = CPUburstCompletion;
-    			e.time = time+(process->cpu_burst);
+                //If there are no currently running processes, run the new process right away
+                if(CPU==-1) {
+                    CPU = processes[processCounter].pid;
+                    printf("Running process with pid = %d\n",CPU);
+                    processes[processCounter].state = 'R';
+                    currentProcess = processes[processCounter].sorted_number;
+                    //implicitly, waiting time is 0 (as it ran right away)
+
+                    if(processes[processCounter].cpu_burst > 8) {
+                        Event e;
+
+                        e.type = CPUburstCompletion;
+                        e.time = time+processes[processCounter].cpu_burst;
+                        
+                        insertEventNode(eventHeapPtr,e);
+
+                    } else {
+                        Event e;
+                        if(processes[processCounter].cpu_burst > 4) {
+                            e.type = TimerExpired;
+                            e.time = time+4;
+                        } else {
+                            e.type = CPUburstCompletion;
+                            e.time = time+processes[processCounter].cpu_burst;
+                        }
+                        insertEventNode(eventHeapPtr,e);
+                    }
+
+                } 
+
+                processCounter++;
 
                 //Adding next Arrival process;
-    			if(processCounter < processCount){
-    				e.type = Arrival;
-    				e.time = processes[processCounter].arrival_time;
-    				insertEventNode(eventHeapPtr,e);
-    			}
+                if(processCounter < processCount){
+                    Event e;
+                    e.type = Arrival;
+                    e.time = processes[processCounter].arrival_time;
+                    insertEventNode(eventHeapPtr,e);
+                }
 
-    			deleteEventNode(eventHeapPtr);
-    			break;
-    			case CPUburstCompletion:
-    			CPU = -1;
-    			printf("Process with id %d has finished execution\n", CPU);
-    			deleteProcessNode(processHeapPtr);
-    			if(processHeapPtr->size != 0){
-    				Process *process = &((processHeapPtr->elem[0]));
-    				process->state = 'R';
-    				CPU = process->pid;
-    				printf("Running process with pid = %d\n",CPU);
-    				waitTime+=(time-(process->arrival_time));
+                deleteEventNode(eventHeapPtr);      //Delete current event as it has occured now
+                break;
+
+
+                case CPUburstCompletion:
+                printf("Process with id %d has finished execution\n", CPU);
+                waitTime += ((time-processes[currentProcess].arrival_time)-processes[currentProcess].cpu_burst);
+                
+                if(processes[currentProcess].cpu_burst > 8) deleteProcessNode(processHeapPtr2);      //Process finished execution (no need for it to be in the heap)
+                else deleteProcessNode(processHeapPtr);
+
+                CPU = -1;               //CPU is now not running any process
+                currentProcess = -1;
+
+                //Run next process if it exists
+                if(processHeapPtr->size != 0){
+                    Process process = processHeapPtr->elem[0];
+                    process.state = 'R';
+                    CPU = process.pid;
+                    currentProcess = process.sorted_number;
+                    printf("Running process with pid = %d\n",CPU);
+
                     //Adding CPUBurst of this process;
-    				Event e;
-    				e.type = CPUburstCompletion;
-    				e.time = time+(process->cpu_burst);
-    				insertEventNode(eventHeapPtr,e);
-    			}
+                    Event e;
+                    if(process.cpu_burst > 4) {
+                        e.type = TimerExpired;
+                        e.time = time+4;
+                    } else {
+                        e.type = CPUburstCompletion;
+                        e.time = time+process.cpu_burst;
+                    }
+                    insertEventNode(eventHeapPtr,e);
+                } else if(processHeapPtr2->size != 0) {
+                    Process process = processHeapPtr2->elem[0];
+                    process.state = 'R';
+                    CPU = process.pid;
+                    currentProcess = process.sorted_number;
+                    printf("Running process with pid = %d\n",CPU);
 
-    			deleteEventNode(eventHeapPtr);
-    			break;
-    			case TimerExpired:
-                //Unused in FCFS
-    			break;
-    		}
-    	}
-        waitTime/=processCount; //TODO: Change this to number of processes
+                    //Adding CPUBurst of this process;
+                    Event e;
+                    e.type = CPUburstCompletion;
+                    e.time = time+process.cpu_burst;
+                    insertEventNode(eventHeapPtr,e);
+                }
+
+                deleteEventNode(eventHeapPtr);      //Delete current event as it has occured now
+                break;
+
+                case TimerExpired:
+                printf("Timer Expired for currently running process with pid = %d\n",CPU);
+                processes[currentProcess].remaining_burst = processes[currentProcess].remaining_burst - 4;
+                processes[currentProcess].event_time = time;
+                deleteProcessNode(processHeapPtr);
+                insertProcessNode(processHeapPtr,processes[currentProcess]);
+                CPU = -1;
+                currentProcess = -1;
+
+                Process process = processHeapPtr->elem[0];
+                process.state = 'R';
+                CPU = process.pid;
+                currentProcess = process.sorted_number;
+                printf("Running process with pid = %d\n",CPU);
+
+                //Adding CPUBurst of this process;
+                Event e;
+                if(process.remaining_burst > 4) {
+                    e.type = TimerExpired;
+                    e.time = time+4;
+                } else {
+                    e.type = CPUburstCompletion;
+                    e.time = time+process.remaining_burst;
+                }
+                insertEventNode(eventHeapPtr,e);
+
+                deleteEventNode(eventHeapPtr);      //Delete current event as it has occured now
+
+                break;
+            }
+        }
+
+        waitTime/=processCount;     //Get avg. wait time
         printf("Average waitTime = %lf\n",waitTime);
-
-        */
+        
     }
     else {
     	printf("Error in choice..... exiting\n");
