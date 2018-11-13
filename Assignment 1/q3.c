@@ -16,25 +16,25 @@ int main(){
 
 		close(pfd[1]);	//Close write
 
-		int in[1];		//Buffer for storing data read from pipe
+		int in;		//Buffer for storing data read from pipe
 		int s = 0;		//Stores sum of all prime numbers processed till now
 		while(1){
-			read(pfd[0],in,1);		//Read 1 byte from pipe to buffer
+			read(pfd[0],&in,sizeof(int));		//Read 1 byte from pipe to buffer
 			int i;					//Iterator
 			int isPrime = 1;		//Prime flag
 
 			//Check if prime (rudimentary method)
-			for(i=2;i<in[0];i++){
-				if(in[0]%i==0){
+			for(i=2;i<in;i++){
+				if(in%i==0){
 					isPrime = 0;
 					break;
 				}
 			}
 
-			if(isPrime==1) s+=in[0];	//If prime, add to 's'
+			if(isPrime==1) s+=in;	//If prime, add to 's'
 			printf("%s\n",isPrime==1?"It is prime":"It is composite");
-			printf("s = %d\n",s);
-			sleep(in[0]%3);
+			printf("s = %d\n\n",s);
+			sleep(in%3);
 		}
 		exit(0);
 
@@ -59,7 +59,7 @@ int main(){
 				chosen[r1] = 1;
 				chosen[r2] = 1;
 				printf("x = %d and y = %d\n",x,y);
-				write(pfd[1],&y,1);			//Send data to child via pipe
+				write(pfd[1],&y,sizeof(int));			//Send data to child via pipe
 				sleep(x/3);
 			}
 
