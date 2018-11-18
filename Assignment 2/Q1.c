@@ -60,8 +60,16 @@ minProcessHeap initProcessHeap() {
 }
 
 void heapifyProcess(minProcessHeap * hp, int i) {
-	int smallest = (LCHILD(i) < hp -> size && hp -> elem[LCHILD(i)].event_time < hp -> elem[i].event_time) ? LCHILD(i) : i;
-	if (RCHILD(i) < hp -> size && hp -> elem[RCHILD(i)].event_time < hp -> elem[smallest].event_time) {
+	if(hp -> size == 0) return;
+	Process lChild = hp -> elem[LCHILD(i)];
+	Process rChild = hp -> elem[RCHILD(i)];
+	Process parent = hp -> elem[i];
+	int smallest = (LCHILD(i) < hp -> size && 
+		(lChild.event_time < parent.event_time || 
+			(lChild.event_time == parent.event_time && lChild.pid < parent.pid))) ? LCHILD(i) : i;
+	if (RCHILD(i) < hp -> size && 
+		(rChild.event_time < hp -> elem[smallest].event_time || 
+			(rChild.event_time == hp -> elem[smallest].event_time && rChild.pid < hp -> elem[smallest].pid))) {
 		smallest = RCHILD(i);
 	}
 	if (smallest != i) {
